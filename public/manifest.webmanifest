@@ -1,0 +1,10 @@
+{
+  "name": "FIN",
+  "short_name": "FIN",
+  "description": "FIN",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f4f6f1",
+  "theme_color": "#132922",
+  "lang": "pt-BR"
+}
