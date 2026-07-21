@@ -47,3 +47,26 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
   assert.match(grantMigration, /to authenticated/i);
   assert.match(grantMigration, /revoke all[\s\S]*from anon/i);
 });
+
+test("wires sensitive actions and tenant integrity protections", async () => {
+  const [app, migration] = await Promise.all([
+    readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607210003_integrity_and_security.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(app, /auth\.getUser\(\)/);
+  assert.match(app, /auth\.updateUser\(\{ email: user\.email, current_password: currentPassword, password \}\)/);
+  assert.match(app, /Ações de \$\{recurrence\.description\}/);
+  assert.match(app, /onEdit\(category\)/);
+  assert.match(app, /role="tab" aria-selected=\{tab === "security"\}/);
+  assert.match(app, /role="tab" aria-selected=\{tab === "appearance"\}/);
+  assert.doesNotMatch(app, /card\.id\.slice\(-4\)/);
+  assert.doesNotMatch(app, /service[_-]role/i);
+
+  assert.match(migration, /create schema if not exists private/i);
+  assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
+  assert.match(migration, /new\.user_id <> auth\.uid\(\)/i);
+  assert.match(migration, /c\.user_id = new\.user_id/i);
+  assert.match(migration, /to authenticated/i);
+  assert.match(migration, /revoke all[\s\S]*from public, anon/i);
+});
