@@ -47,7 +47,7 @@ Acesse `http://localhost:3000/dashboard`.
 ## Configurar o Supabase
 
 1. Crie um projeto no Supabase.
-2. Abra o SQL Editor e execute `supabase/migrations/202607200001_initial_schema.sql`.
+2. Abra o SQL Editor e execute, em ordem, `supabase/migrations/202607200001_initial_schema.sql` e `supabase/migrations/202607210002_authenticated_api_access.sql`.
 3. Em Authentication, habilite e-mail/senha e defina as URLs permitidas.
 4. Copie `.env.example` para `.env.local`.
 5. Preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` com os valores de Project Settings → API.
