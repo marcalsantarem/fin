@@ -49,10 +49,11 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
 });
 
 test("wires sensitive actions and tenant integrity protections", async () => {
-  const [app, migration, themeMigration] = await Promise.all([
+  const [app, migration, themeMigration, expandedThemeMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607210003_integrity_and_security.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220004_user_themes_and_google_auth.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607220005_expand_theme_collection.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /auth\.getUser\(\)/);
@@ -62,6 +63,8 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(app, /Clássico/);
   assert.match(app, /Ateliê/);
   assert.match(app, /Pulse/);
+  assert.match(app, /Lumen/);
+  assert.match(app, /Aurora/);
   assert.match(app, /from\("profiles"\)\.update\(\{ theme: nextTheme, color_mode: nextMode \}\)/);
   assert.match(app, /Ações de \$\{recurrence\.description\}/);
   assert.match(app, /onEdit\(category\)/);
@@ -85,6 +88,8 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(themeMigration, /classic', 'atelier', 'pulse/i);
   assert.match(themeMigration, /color_mode/i);
   assert.doesNotMatch(themeMigration, /truncate|delete from|drop table/i);
+  assert.match(expandedThemeMigration, /classic', 'atelier', 'pulse', 'lumen', 'aurora/i);
+  assert.doesNotMatch(expandedThemeMigration, /truncate|delete from|drop table/i);
 });
 
 test("keeps dedicated and compatible builds for Sites and Vercel", async () => {

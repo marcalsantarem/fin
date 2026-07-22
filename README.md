@@ -8,7 +8,7 @@ Aplicação financeira pessoal responsiva construída com Next.js, React, TypeSc
 - Lançamentos com busca, filtros, status e cadastro validado.
 - Contas, cartões, compras parceladas, recorrências e categorias.
 - Relatórios mensais, semestrais, anuais e exportação preparada.
-- Três interfaces completas (Clássico, Ateliê e Pulse), cada uma com modo claro, escuro e automático.
+- Cinco interfaces completas (Clássico, Ateliê, Pulse, Lumen e Aurora), cada uma com modo claro, escuro e automático.
 - Preferência visual sincronizada por usuário e estrutura PWA responsiva.
 - Autenticação por e-mail/senha ou Google OAuth.
 - Modelo PostgreSQL completo com valores monetários em centavos.
