@@ -27,6 +27,7 @@ export type CreditCardRow = {
   account_id: string | null;
   name: string;
   limit_amount_cents: number;
+  has_limit: boolean;
   closing_day: number;
   due_day: number;
   color: string;
@@ -122,7 +123,7 @@ export async function loadFinanceData(client: SupabaseClient): Promise<FinanceDa
   const [profile, accounts, cards, categories, transactions, installments, recurrences] = await Promise.all([
     client.from("profiles").select("id,user_id,name,default_currency,theme,color_mode").maybeSingle(),
     client.from("accounts").select("id,user_id,name,type,initial_balance_cents,current_balance_cents,color,icon,active").is("deleted_at", null).order("created_at"),
-    client.from("credit_cards").select("id,user_id,account_id,name,limit_amount_cents,closing_day,due_day,color,active").is("deleted_at", null).order("created_at"),
+    client.from("credit_cards").select("id,user_id,account_id,name,limit_amount_cents,has_limit,closing_day,due_day,color,active").is("deleted_at", null).order("created_at"),
     client.from("categories").select("id,user_id,name,type,parent_id,color,icon,active").is("deleted_at", null).order("name"),
     client.from("transactions").select("id,user_id,type,description,amount_cents,transaction_date,due_date,paid_date,competence_month,account_id,credit_card_id,category_id,status,notes,installment_group_id,recurrence_id,installment_number,installments_total,category:categories(id,name,color,icon),account:accounts(id,name),credit_card:credit_cards(id,name)").is("deleted_at", null).order("due_date", { ascending: false }).order("created_at", { ascending: false }),
     client.from("installment_groups").select("id,user_id,description,total_amount_cents,installments_count,first_due_date,category_id,account_id,credit_card_id,notes").is("deleted_at", null).order("created_at", { ascending: false }),

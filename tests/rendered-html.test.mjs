@@ -48,13 +48,15 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
   assert.match(grantMigration, /revoke all[\s\S]*from anon/i);
 });
 
-test("wires sensitive actions, theme contrast, and tenant integrity protections", async () => {
-  const [app, styles, migration, themeMigration, expandedThemeMigration] = await Promise.all([
+test("wires sensitive actions, responsive themes, and tenant integrity protections", async () => {
+  const [app, styles, data, migration, themeMigration, expandedThemeMigration, resetMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/supabase/data.ts", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607210003_integrity_and_security.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220004_user_themes_and_google_auth.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220005_expand_theme_collection.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607220006_responsive_reset_and_unlimited_cards.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /auth\.getUser\(\)/);
@@ -76,6 +78,9 @@ test("wires sensitive actions, theme contrast, and tenant integrity protections"
   assert.match(app, /isCategoryAvailable/);
   assert.match(app, /role="tab" aria-selected=\{tab === "security"\}/);
   assert.match(app, /role="tab" aria-selected=\{tab === "appearance"\}/);
+  assert.match(app, /signInWithPassword\(\{ email: user\.email, password: currentPassword \}\)[\s\S]*rpc\("reset_finance_data"\)/);
+  assert.match(app, /Cartão sem limite predefinido/);
+  assert.match(app, /has_limit: !value\.unlimited/);
   assert.match(app, /Seu dinheiro\./);
   assert.match(app, /Mais claro\./);
   assert.doesNotMatch(app, /auth-theme-showcase/);
@@ -91,6 +96,11 @@ test("wires sensitive actions, theme contrast, and tenant integrity protections"
   assert.match(styles, /Readable application typography/);
   assert.match(styles, /\.tx-main strong \{ font-size:13px; \}/);
   assert.match(styles, /\.category-legend > div,[\s\S]*font-size:11\.5px/);
+  assert.match(styles, /input:not\(\[type="checkbox"\]\)[\s\S]*font-size:16px !important/);
+  assert.match(styles, /\.theme-gallery \{ width:100%; grid-template-columns:minmax\(0,1fr\)/);
+
+  assert.match(data, /has_limit: boolean/);
+  assert.match(data, /limit_amount_cents,has_limit,closing_day/);
 
   assert.match(migration, /create schema if not exists private/i);
   assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
@@ -104,6 +114,13 @@ test("wires sensitive actions, theme contrast, and tenant integrity protections"
   assert.doesNotMatch(themeMigration, /truncate|delete from|drop table/i);
   assert.match(expandedThemeMigration, /classic', 'atelier', 'pulse', 'lumen', 'aurora/i);
   assert.doesNotMatch(expandedThemeMigration, /truncate|delete from|drop table/i);
+  assert.match(resetMigration, /add column if not exists has_limit boolean not null default true/i);
+  assert.match(resetMigration, /create or replace function public\.reset_finance_data\(\)/i);
+  assert.match(resetMigration, /security invoker[\s\S]*set search_path = ''/i);
+  assert.match(resetMigration, /delete from public\.transactions where user_id = v_user_id/i);
+  assert.match(resetMigration, /delete from public\.categories where user_id = v_user_id/i);
+  assert.match(resetMigration, /grant execute on function public\.reset_finance_data\(\) to authenticated/i);
+  assert.doesNotMatch(resetMigration, /security definer|service[_-]role/i);
 });
 
 test("keeps dedicated and compatible builds for Sites and Vercel", async () => {
