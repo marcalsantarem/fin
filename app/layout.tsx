@@ -14,12 +14,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: base,
     title: "FIN",
-    description: "FIN",
+    description: "Organize sua vida financeira com clareza, segurança e simplicidade.",
     applicationName: "FIN",
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: "FIN", statusBarStyle: "default" },
-    openGraph: { title: "FIN", description: "FIN", images: [{ url: new URL("/og.png", base), width: 1792, height: 912, alt: "FIN" }] },
-    twitter: { card: "summary_large_image", title: "FIN", description: "FIN", images: [new URL("/og.png", base)] },
+    openGraph: { title: "FIN", description: "Organize sua vida financeira com clareza.", images: [{ url: new URL("/og-v2.png", base), width: 1536, height: 1024, alt: "FIN — clareza para sua vida financeira" }] },
+    twitter: { card: "summary_large_image", title: "FIN", description: "Organize sua vida financeira com clareza.", images: [new URL("/og-v2.png", base)] },
   };
 }
 

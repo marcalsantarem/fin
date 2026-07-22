@@ -58,6 +58,11 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(app, /auth\.updateUser\(\{ email: user\.email, current_password: currentPassword, password \}\)/);
   assert.match(app, /Ações de \$\{recurrence\.description\}/);
   assert.match(app, /onEdit\(category\)/);
+  assert.match(app, /Nova subcategoria/);
+  assert.match(app, /parent_id: parentId/);
+  assert.match(app, /aria-controls=\{regionId\}/);
+  assert.match(app, /CategoryOptions categories=\{compatible\}/);
+  assert.match(app, /isCategoryAvailable/);
   assert.match(app, /role="tab" aria-selected=\{tab === "security"\}/);
   assert.match(app, /role="tab" aria-selected=\{tab === "appearance"\}/);
   assert.doesNotMatch(app, /card\.id\.slice\(-4\)/);

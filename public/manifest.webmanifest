@@ -1,7 +1,7 @@
 {
   "name": "FIN",
   "short_name": "FIN",
-  "description": "FIN",
+  "description": "Organize sua vida financeira com clareza e simplicidade.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#f4f6f1",
