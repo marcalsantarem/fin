@@ -88,6 +88,9 @@ test("wires sensitive actions, theme contrast, and tenant integrity protections"
   assert.match(styles, /\[data-design="aurora"\] \.account-total/);
   assert.match(styles, /\[data-theme="dark"\] \.status-pago/);
   assert.match(styles, /\[data-theme="dark"\] \.metric-icon\.green/);
+  assert.match(styles, /Readable application typography/);
+  assert.match(styles, /\.tx-main strong \{ font-size:13px; \}/);
+  assert.match(styles, /\.category-legend > div,[\s\S]*font-size:11\.5px/);
 
   assert.match(migration, /create schema if not exists private/i);
   assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
