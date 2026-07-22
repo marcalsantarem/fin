@@ -5,6 +5,8 @@ export type Profile = {
   user_id: string;
   name: string;
   default_currency: string;
+  theme: "classic" | "atelier" | "pulse";
+  color_mode: "light" | "dark" | "system";
 };
 
 export type Account = {
@@ -118,7 +120,7 @@ export const emptyFinanceData: FinanceData = {
 
 export async function loadFinanceData(client: SupabaseClient): Promise<FinanceData> {
   const [profile, accounts, cards, categories, transactions, installments, recurrences] = await Promise.all([
-    client.from("profiles").select("id,user_id,name,default_currency").maybeSingle(),
+    client.from("profiles").select("id,user_id,name,default_currency,theme,color_mode").maybeSingle(),
     client.from("accounts").select("id,user_id,name,type,initial_balance_cents,current_balance_cents,color,icon,active").is("deleted_at", null).order("created_at"),
     client.from("credit_cards").select("id,user_id,account_id,name,limit_amount_cents,closing_day,due_day,color,active").is("deleted_at", null).order("created_at"),
     client.from("categories").select("id,user_id,name,type,parent_id,color,icon,active").is("deleted_at", null).order("name"),

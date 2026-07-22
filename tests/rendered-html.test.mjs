@@ -49,13 +49,20 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
 });
 
 test("wires sensitive actions and tenant integrity protections", async () => {
-  const [app, migration] = await Promise.all([
+  const [app, migration, themeMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607210003_integrity_and_security.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607220004_user_themes_and_google_auth.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /auth\.getUser\(\)/);
-  assert.match(app, /auth\.updateUser\(\{ email: user\.email, current_password: currentPassword, password \}\)/);
+  assert.match(app, /signInWithPassword\(\{ email: user\.email, password: currentPassword \}\)/);
+  assert.match(app, /auth\.updateUser\(\{ password \}\)/);
+  assert.match(app, /signInWithOAuth\(\{ provider: "google"/);
+  assert.match(app, /Clássico/);
+  assert.match(app, /Ateliê/);
+  assert.match(app, /Pulse/);
+  assert.match(app, /from\("profiles"\)\.update\(\{ theme: nextTheme, color_mode: nextMode \}\)/);
   assert.match(app, /Ações de \$\{recurrence\.description\}/);
   assert.match(app, /onEdit\(category\)/);
   assert.match(app, /Nova subcategoria/);
@@ -74,6 +81,10 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(migration, /c\.user_id = new\.user_id/i);
   assert.match(migration, /to authenticated/i);
   assert.match(migration, /revoke all[\s\S]*from public, anon/i);
+  assert.match(themeMigration, /add column if not exists theme/i);
+  assert.match(themeMigration, /classic', 'atelier', 'pulse/i);
+  assert.match(themeMigration, /color_mode/i);
+  assert.doesNotMatch(themeMigration, /truncate|delete from|drop table/i);
 });
 
 test("keeps dedicated and compatible builds for Sites and Vercel", async () => {
