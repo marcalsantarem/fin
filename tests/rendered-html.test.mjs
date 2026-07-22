@@ -48,9 +48,10 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
   assert.match(grantMigration, /revoke all[\s\S]*from anon/i);
 });
 
-test("wires sensitive actions and tenant integrity protections", async () => {
-  const [app, migration, themeMigration, expandedThemeMigration] = await Promise.all([
+test("wires sensitive actions, theme contrast, and tenant integrity protections", async () => {
+  const [app, styles, migration, themeMigration, expandedThemeMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607210003_integrity_and_security.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220004_user_themes_and_google_auth.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220005_expand_theme_collection.sql", import.meta.url), "utf8"),
@@ -75,8 +76,18 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(app, /isCategoryAvailable/);
   assert.match(app, /role="tab" aria-selected=\{tab === "security"\}/);
   assert.match(app, /role="tab" aria-selected=\{tab === "appearance"\}/);
+  assert.match(app, /Seu dinheiro\./);
+  assert.match(app, /Mais claro\./);
+  assert.doesNotMatch(app, /auth-theme-showcase/);
+  assert.doesNotMatch(app, /auth-proof/);
+  assert.doesNotMatch(app, /secure-note/);
   assert.doesNotMatch(app, /card\.id\.slice\(-4\)/);
   assert.doesNotMatch(app, /service[_-]role/i);
+
+  assert.match(styles, /\[data-design="lumen"\] \.account-total/);
+  assert.match(styles, /\[data-design="aurora"\] \.account-total/);
+  assert.match(styles, /\[data-theme="dark"\] \.status-pago/);
+  assert.match(styles, /\[data-theme="dark"\] \.metric-icon\.green/);
 
   assert.match(migration, /create schema if not exists private/i);
   assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
