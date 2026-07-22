@@ -21,7 +21,7 @@ test("server-renders the FIN authentication bridge", async () => {
   const html = await response.text();
   assert.match(html, /<title>FIN<\/title>/i);
   assert.match(html, /name="application-name" content="FIN"/i);
-  assert.match(html, /Conectando ao Supabase/);
+  assert.match(html, /Preparando seu espaço/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -49,7 +49,7 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
 });
 
 test("wires sensitive actions, responsive themes, and tenant integrity protections", async () => {
-  const [app, styles, data, migration, themeMigration, expandedThemeMigration, resetMigration] = await Promise.all([
+  const [app, styles, data, migration, themeMigration, expandedThemeMigration, resetMigration, vertexMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../src/lib/supabase/data.ts", import.meta.url), "utf8"),
@@ -57,6 +57,7 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
     readFile(new URL("../supabase/migrations/202607220004_user_themes_and_google_auth.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220005_expand_theme_collection.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220006_responsive_reset_and_unlimited_cards.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607220007_vertex_theme_and_installment_deletion.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /auth\.getUser\(\)/);
@@ -68,12 +69,14 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(app, /Pulse/);
   assert.match(app, /Lumen/);
   assert.match(app, /Aurora/);
+  assert.match(app, /Vértice/);
   assert.match(app, /from\("profiles"\)\.update\(\{ theme: nextTheme, color_mode: nextMode \}\)/);
   assert.match(app, /Ações de \$\{recurrence\.description\}/);
   assert.match(app, /onEdit\(category\)/);
   assert.match(app, /Nova subcategoria/);
   assert.match(app, /parent_id: parentId/);
   assert.match(app, /aria-controls=\{regionId\}/);
+  assert.doesNotMatch(app, /category-guide|category-stats/);
   assert.match(app, /CategoryOptions categories=\{compatible\}/);
   assert.match(app, /isCategoryAvailable/);
   assert.match(app, /role="tab" aria-selected=\{tab === "security"\}/);
@@ -81,6 +84,10 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(app, /signInWithPassword\(\{ email: user\.email, password: currentPassword \}\)[\s\S]*rpc\("reset_finance_data"\)/);
   assert.match(app, /Cartão sem limite predefinido/);
   assert.match(app, /has_limit: !value\.unlimited/);
+  assert.match(app, /rpc\("delete_installment_plan", \{ p_group_id: group\.id \}\)/);
+  assert.match(app, /Excluir parcelamento/);
+  assert.match(app, /className="transaction-table"/);
+  assert.match(app, /data-label="Valor"/);
   assert.match(app, /Seu dinheiro\./);
   assert.match(app, /Mais claro\./);
   assert.doesNotMatch(app, /auth-theme-showcase/);
@@ -88,6 +95,7 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.doesNotMatch(app, /secure-note/);
   assert.doesNotMatch(app, /card\.id\.slice\(-4\)/);
   assert.doesNotMatch(app, /service[_-]role/i);
+  assert.doesNotMatch(app, /Conectando ao Supabase|Sincronizando com o Supabase|Dados sincronizados com o Supabase|salvo diretamente no Supabase|políticas RLS|criadas pelo Supabase|armazenadas no Supabase/);
 
   assert.match(styles, /\[data-design="lumen"\] \.account-total/);
   assert.match(styles, /\[data-design="aurora"\] \.account-total/);
@@ -98,9 +106,12 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(styles, /\.category-legend > div,[\s\S]*font-size:11\.5px/);
   assert.match(styles, /input:not\(\[type="checkbox"\]\)[\s\S]*font-size:16px !important/);
   assert.match(styles, /\.theme-gallery \{ width:100%; grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(styles, /\[data-design="vertex"\] body/);
+  assert.match(styles, /\.transaction-table tr \{ width:100%; display:grid;[\s\S]*grid-template-areas:"description amount" "category amount"/);
 
   assert.match(data, /has_limit: boolean/);
   assert.match(data, /limit_amount_cents,has_limit,closing_day/);
+  assert.match(data, /"aurora" \| "vertex"/);
 
   assert.match(migration, /create schema if not exists private/i);
   assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
@@ -121,6 +132,13 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(resetMigration, /delete from public\.categories where user_id = v_user_id/i);
   assert.match(resetMigration, /grant execute on function public\.reset_finance_data\(\) to authenticated/i);
   assert.doesNotMatch(resetMigration, /security definer|service[_-]role/i);
+  assert.match(vertexMigration, /classic', 'atelier', 'pulse', 'lumen', 'aurora', 'vertex/i);
+  assert.match(vertexMigration, /create or replace function public\.delete_installment_plan\(p_group_id uuid\)/i);
+  assert.match(vertexMigration, /security invoker[\s\S]*set search_path = ''/i);
+  assert.match(vertexMigration, /update public\.transactions[\s\S]*user_id = v_user_id[\s\S]*installment_group_id = p_group_id/i);
+  assert.match(vertexMigration, /update public\.installment_groups[\s\S]*user_id = v_user_id/i);
+  assert.match(vertexMigration, /grant execute on function public\.delete_installment_plan\(uuid\) to authenticated/i);
+  assert.doesNotMatch(vertexMigration, /security definer|service[_-]role/i);
 });
 
 test("keeps dedicated and compatible builds for Sites and Vercel", async () => {
