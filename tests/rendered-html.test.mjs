@@ -106,6 +106,7 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(styles, /\.category-legend > div,[\s\S]*font-size:11\.5px/);
   assert.match(styles, /input:not\(\[type="checkbox"\]\)[\s\S]*font-size:16px !important/);
   assert.match(styles, /\.theme-gallery \{ width:100%; grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(styles, /\.sidebar \{[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain;/);
   assert.match(styles, /\[data-design="vertex"\] body/);
   assert.match(styles, /\.transaction-table tr \{ width:100%; display:grid;[\s\S]*grid-template-areas:"description amount" "category amount"/);
 
