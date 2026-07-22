@@ -70,3 +70,23 @@ test("wires sensitive actions and tenant integrity protections", async () => {
   assert.match(migration, /to authenticated/i);
   assert.match(migration, /revoke all[\s\S]*from public, anon/i);
 });
+
+test("keeps dedicated and compatible builds for Sites and Vercel", async () => {
+  const [packageJson, viteConfig, vercelConfig, nitroConfig] = await Promise.all([
+    readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../vercel.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("../nitro.config.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(packageJson.engines.node, "22.x");
+  assert.equal(packageJson.scripts.build, "vinext build");
+  assert.equal(packageJson.scripts["build:vercel"], "vite build");
+  assert.ok(packageJson.devDependencies.nitro);
+  assert.match(viteConfig, /process\.env\.VERCEL/);
+  assert.match(viteConfig, /import\("nitro\/vite"\)/);
+  assert.equal(vercelConfig.framework, "nitro");
+  assert.equal(vercelConfig.buildCommand, "npm run build:vercel");
+  assert.equal(vercelConfig.outputDirectory, null);
+  assert.match(nitroConfig, /runtime: "nodejs22\.x"/);
+});
