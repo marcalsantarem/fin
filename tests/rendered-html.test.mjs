@@ -70,6 +70,14 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(app, /Lumen/);
   assert.match(app, /Aurora/);
   assert.match(app, /Vértice/);
+  assert.match(app, /id: "planning", label: "Planejamento"/);
+  assert.match(app, /function isRealized\(transaction: TransactionRow\) \{ return transaction\.status === "paid"; \}/);
+  assert.match(app, /function isForecast\(transaction: TransactionRow\)/);
+  assert.match(app, /function PlanningScreen\(\{ transactions, accounts, onNew \}/);
+  assert.match(app, /projectionThrough = \(month: string\) => currentBalance \+ forecast\.filter/);
+  assert.match(app, /type="month" min=\{currentMonth\}/);
+  assert.match(app, /Os totais consideram apenas valores já pagos ou recebidos/);
+  assert.match(app, /Consolidação somente do que já foi pago ou recebido/);
   assert.match(app, /from\("profiles"\)\.update\(\{ theme: nextTheme, color_mode: nextMode \}\)/);
   assert.match(app, /Ações de \$\{recurrence\.description\}/);
   assert.match(app, /onEdit\(category\)/);
@@ -108,6 +116,8 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(styles, /\.theme-gallery \{ width:100%; grid-template-columns:minmax\(0,1fr\)/);
   assert.match(styles, /\.sidebar \{[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain;/);
   assert.match(styles, /\[data-design="vertex"\] body/);
+  assert.match(styles, /\.planning-hero\{[^}]*grid-template-columns/);
+  assert.match(styles, /\.planning-item \{ grid-template-columns:38px minmax\(0,1fr\) auto; grid-template-areas:"date copy amount" "date status status"/);
   assert.match(styles, /\.transaction-table tr \{ width:100%; display:grid;[\s\S]*grid-template-areas:"description amount" "category amount"/);
 
   assert.match(data, /has_limit: boolean/);
