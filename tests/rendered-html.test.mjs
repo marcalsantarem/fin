@@ -49,7 +49,7 @@ test("keeps Supabase auth and data access wired to the FIN UI", async () => {
 });
 
 test("wires sensitive actions, responsive themes, and tenant integrity protections", async () => {
-  const [app, styles, data, migration, themeMigration, expandedThemeMigration, resetMigration, vertexMigration] = await Promise.all([
+  const [app, styles, data, migration, themeMigration, expandedThemeMigration, resetMigration, vertexMigration, nineThemeMigration] = await Promise.all([
     readFile(new URL("../app/fin-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../src/lib/supabase/data.ts", import.meta.url), "utf8"),
@@ -58,6 +58,7 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
     readFile(new URL("../supabase/migrations/202607220005_expand_theme_collection.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220006_responsive_reset_and_unlimited_cards.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202607220007_vertex_theme_and_installment_deletion.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202607230008_expand_to_nine_themes.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /auth\.getUser\(\)/);
@@ -70,6 +71,9 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(app, /Lumen/);
   assert.match(app, /Aurora/);
   assert.match(app, /Vértice/);
+  assert.match(app, /Sumi/);
+  assert.match(app, /Dopamina/);
+  assert.match(app, /Terminal 84/);
   assert.match(app, /id: "planning", label: "Planejamento"/);
   assert.match(app, /function isRealized\(transaction: TransactionRow\) \{ return transaction\.status === "paid"; \}/);
   assert.match(app, /function isForecast\(transaction: TransactionRow\)/);
@@ -120,13 +124,19 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(styles, /\.theme-gallery \{ width:100%; grid-template-columns:minmax\(0,1fr\)/);
   assert.match(styles, /\.sidebar \{[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain;/);
   assert.match(styles, /\[data-design="vertex"\] body/);
+  assert.match(styles, /\[data-design="sumi"\] body/);
+  assert.match(styles, /\[data-design="dopamine"\] body/);
+  assert.match(styles, /\[data-design="terminal"\] body/);
+  assert.match(styles, /--banner-height:/);
+  assert.match(styles, /\[data-design\] \.account-total,[\s\S]*\[data-design\] \.planning-hero[\s\S]*height:var\(--banner-height\)/);
+  assert.match(styles, /\.theme-gallery \{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(styles, /\.planning-hero\{[^}]*grid-template-columns/);
   assert.match(styles, /\.planning-item \{ grid-template-columns:38px minmax\(0,1fr\) auto; grid-template-areas:"date copy amount" "date status status"/);
   assert.match(styles, /\.transaction-table tr \{ width:100%; display:grid;[\s\S]*grid-template-areas:"description amount" "category amount"/);
 
   assert.match(data, /has_limit: boolean/);
   assert.match(data, /limit_amount_cents,has_limit,closing_day/);
-  assert.match(data, /"aurora" \| "vertex"/);
+  assert.match(data, /"aurora" \| "vertex" \| "sumi" \| "dopamine" \| "terminal"/);
 
   assert.match(migration, /create schema if not exists private/i);
   assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
@@ -154,6 +164,8 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(vertexMigration, /update public\.installment_groups[\s\S]*user_id = v_user_id/i);
   assert.match(vertexMigration, /grant execute on function public\.delete_installment_plan\(uuid\) to authenticated/i);
   assert.doesNotMatch(vertexMigration, /security definer|service[_-]role/i);
+  assert.match(nineThemeMigration, /classic[\s\S]*atelier[\s\S]*pulse[\s\S]*lumen[\s\S]*aurora[\s\S]*vertex[\s\S]*sumi[\s\S]*dopamine[\s\S]*terminal/i);
+  assert.doesNotMatch(nineThemeMigration, /truncate|delete from|drop table/i);
 });
 
 test("keeps dedicated and compatible builds for Sites and Vercel", async () => {

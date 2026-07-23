@@ -18,8 +18,8 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: "FIN",
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: "FIN", statusBarStyle: "default" },
-    openGraph: { title: "FIN", description: "Organize sua vida financeira com clareza e uma interface que combina com você.", images: [{ url: new URL("/og-v4.png", base), width: 1536, height: 1024, alt: "FIN — seis experiências visuais para suas finanças" }] },
-    twitter: { card: "summary_large_image", title: "FIN", description: "Seis temas completos para organizar sua vida financeira.", images: [new URL("/og-v4.png", base)] },
+    openGraph: { title: "FIN", description: "Organize sua vida financeira com clareza e uma interface que combina com você.", images: [{ url: new URL("/og-v5.png", base), width: 1536, height: 1024, alt: "FIN — nove experiências visuais para suas finanças" }] },
+    twitter: { card: "summary_large_image", title: "FIN", description: "Nove temas completos para organizar sua vida financeira.", images: [new URL("/og-v5.png", base)] },
   };
 }
 

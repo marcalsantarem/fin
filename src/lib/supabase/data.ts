@@ -5,7 +5,7 @@ export type Profile = {
   user_id: string;
   name: string;
   default_currency: string;
-  theme: "classic" | "atelier" | "pulse" | "lumen" | "aurora" | "vertex";
+  theme: "classic" | "atelier" | "pulse" | "lumen" | "aurora" | "vertex" | "sumi" | "dopamine" | "terminal";
   color_mode: "light" | "dark" | "system";
 };
 

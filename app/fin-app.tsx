@@ -30,10 +30,10 @@ type EntityKind = "account" | "card" | "installment" | "recurrence" | "category"
 type EditableEntity = Account | CreditCardRow | Category | Recurrence;
 type EntityComposer = { kind: EntityKind; item?: EditableEntity; parentId?: string } | null;
 type Toast = { message: string; error?: boolean } | null;
-type ThemeId = "classic" | "atelier" | "pulse" | "lumen" | "aurora" | "vertex";
+type ThemeId = "classic" | "atelier" | "pulse" | "lumen" | "aurora" | "vertex" | "sumi" | "dopamine" | "terminal";
 type ColorMode = "light" | "dark" | "system";
 
-const themeIds: ThemeId[] = ["classic", "atelier", "pulse", "lumen", "aurora", "vertex"];
+const themeIds: ThemeId[] = ["classic", "atelier", "pulse", "lumen", "aurora", "vertex", "sumi", "dopamine", "terminal"];
 const colorModes: ColorMode[] = ["light", "dark", "system"];
 const themeCatalog: { id: ThemeId; name: string; tag: string; description: string }[] = [
   { id: "classic", name: "Clássico", tag: "FIN original", description: "Verde sereno, navegação lateral e leitura objetiva." },
@@ -42,6 +42,9 @@ const themeCatalog: { id: ThemeId; name: string; tag: string; description: strin
   { id: "lumen", name: "Lumen", tag: "Essencial", description: "Ultraclean, silencioso e desenhado para destacar somente o que importa." },
   { id: "aurora", name: "Aurora", tag: "Imersivo", description: "Luzes polares, vidro fosco e profundidade em uma composição bento." },
   { id: "vertex", name: "Vértice", tag: "Neo brutal", description: "Cobalto, amarelo ácido e blocos expressivos com personalidade radical." },
+  { id: "sumi", name: "Sumi", tag: "Ink & seal", description: "Papel de arroz, tinta profunda e um selo vermelho em uma composição japonesa contemporânea." },
+  { id: "dopamine", name: "Dopamina", tag: "Playful", description: "Cores doces, formas elásticas e cartões flutuantes com uma energia otimista." },
+  { id: "terminal", name: "Terminal 84", tag: "Retro-futuro", description: "Fósforo verde, âmbar e uma central de comando inspirada nos computadores dos anos 80." },
 ];
 function validTheme(value: unknown): ThemeId { return themeIds.includes(value as ThemeId) ? value as ThemeId : "classic"; }
 function validColorMode(value: unknown): ColorMode { return colorModes.includes(value as ColorMode) ? value as ColorMode : "system"; }
