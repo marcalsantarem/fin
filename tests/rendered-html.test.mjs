@@ -73,8 +73,11 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(app, /id: "planning", label: "Planejamento"/);
   assert.match(app, /function isRealized\(transaction: TransactionRow\) \{ return transaction\.status === "paid"; \}/);
   assert.match(app, /function isForecast\(transaction: TransactionRow\)/);
-  assert.match(app, /function PlanningScreen\(\{ transactions, accounts, onNew \}/);
-  assert.match(app, /projectionThrough = \(month: string\) => currentBalance \+ forecast\.filter/);
+  assert.match(app, /function PlanningScreen\(\{ transactions, accounts, cards, recurrences, onNew \}/);
+  assert.match(app, /recurrence\.active && recurrence\.type === "expense" && recurrence\.frequency === "monthly"/);
+  assert.match(app, /materializedOccurrences\.has\(`\$\{recurrence\.id\}:\$\{month\}`\)/);
+  assert.match(app, /projectionThrough = \(month: string\) => currentBalance \+ forecast\.filter[\s\S]*- recurringExpenseThrough\(month\)/);
+  assert.match(app, /status === "recurring" \? "Recorrente"/);
   assert.match(app, /type="month" min=\{currentMonth\}/);
   assert.match(app, /Os totais consideram apenas valores já pagos ou recebidos/);
   assert.match(app, /Consolidação somente do que já foi pago ou recebido/);
@@ -108,6 +111,7 @@ test("wires sensitive actions, responsive themes, and tenant integrity protectio
   assert.match(styles, /\[data-design="lumen"\] \.account-total/);
   assert.match(styles, /\[data-design="aurora"\] \.account-total/);
   assert.match(styles, /\[data-theme="dark"\] \.status-pago/);
+  assert.match(styles, /\[data-theme="dark"\] \.status-recorrente/);
   assert.match(styles, /\[data-theme="dark"\] \.metric-icon\.green/);
   assert.match(styles, /Readable application typography/);
   assert.match(styles, /\.tx-main strong \{ font-size:13px; \}/);

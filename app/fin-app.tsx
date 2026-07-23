@@ -73,6 +73,10 @@ function reais(value: number | null | undefined) { return money.format(Number(va
 function dateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; }
 function firstDay(date: string) { return `${date.slice(0, 7)}-01`; }
 function shiftMonthKey(key: string, amount: number) { const [year, month] = key.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1 + amount, 1)); return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`; }
+function monthOrdinal(key: string) { const [year, month] = key.split("-").map(Number); return year * 12 + month - 1; }
+function daysInMonthKey(key: string) { const [year, month] = key.split("-").map(Number); return new Date(Date.UTC(year, month, 0)).getUTCDate(); }
+function recurrenceDate(recurrence: Recurrence, month: string) { const preferredDay = recurrence.day_of_month ?? (Number(recurrence.start_date.slice(8, 10)) || 1); const day = Math.min(Math.max(preferredDay, 1), daysInMonthKey(month)); return `${month}-${String(day).padStart(2, "0")}`; }
+function recurrenceCoversMonth(recurrence: Recurrence, month: string) { const dueDate = recurrenceDate(recurrence, month); return dueDate >= recurrence.start_date && (!recurrence.end_date || dueDate <= recurrence.end_date); }
 function transactionMonth(transaction: TransactionRow) { return (transaction.due_date ?? transaction.transaction_date).slice(0, 7); }
 function isRealized(transaction: TransactionRow) { return transaction.status === "paid"; }
 function isForecast(transaction: TransactionRow) { return forecastStatuses.includes(transaction.status); }
@@ -385,7 +389,7 @@ export function FinApp({ initialSection = "dashboard", openComposer = false }: {
           {dataError && <div className="data-error"><span>{dataError}</span><button onClick={() => void refresh()}>Tentar novamente</button></div>}
           {active === "dashboard" && <Dashboard period={period} setPeriod={setPeriod} name={displayName} data={data} realizedIncome={realizedIncome} realizedExpense={realizedExpense} forecastExpense={forecastExpense} onNew={() => setComposer(true)} onNavigate={go} />}
           {active === "transactions" && <TransactionsScreen key={`${transactionScope.query ?? ""}:${transactionScope.sourceId ?? ""}:${transactionScope.installmentId ?? ""}`} transactions={data.transactions} categories={data.categories} initialQuery={transactionScope.query} sourceId={transactionScope.sourceId} installmentId={transactionScope.installmentId} onNew={() => setComposer(true)} onTogglePaid={togglePaid} onDelete={deleteTransaction} />}
-          {active === "planning" && <PlanningScreen transactions={data.transactions} accounts={data.accounts} onNew={() => setComposer(true)} />}
+          {active === "planning" && <PlanningScreen transactions={data.transactions} accounts={data.accounts} cards={data.cards} recurrences={data.recurrences} onNew={() => setComposer(true)} />}
           {active === "accounts" && <AccountsScreen accounts={data.accounts} transactions={data.transactions} onNew={() => setEntityComposer({ kind: "account" })} onEdit={(item) => setEntityComposer({ kind: "account", item })} onActive={(item) => void setEntityActive("account", item)} onRemove={(item) => void removeEntity("account", item)} onStatement={(item) => { setTransactionScope({ sourceId: item.id }); go("transactions"); }} />}
           {active === "cards" && <CardsScreen cards={data.cards} transactions={data.transactions} onNew={() => setEntityComposer({ kind: "card" })} onEdit={(item) => setEntityComposer({ kind: "card", item })} onActive={(item) => void setEntityActive("card", item)} onRemove={(item) => void removeEntity("card", item)} onStatement={(item) => { setTransactionScope({ sourceId: item.id }); go("transactions"); }} />}
           {active === "installments" && <InstallmentsScreen groups={data.installments} transactions={data.transactions} onNew={() => setEntityComposer({ kind: "installment" })} onStatement={(item) => { setTransactionScope({ installmentId: item.id }); go("transactions"); }} onRemove={(item) => void deleteInstallmentPlan(item)} />}
@@ -447,29 +451,83 @@ function InstallmentsScreen({ groups, transactions, onNew, onStatement, onRemove
   return <><PageTitle eyebrow="PLANEJAMENTO" title="Parcelamentos" subtitle="Acompanhe suas compras parceladas e o que ainda falta pagar." action={<button className="primary-button" onClick={onNew}><Plus size={18} />Nova compra parcelada</button>} /><div className="summary-strip"><div><span>Saldo parcelado</span><strong>{reais(remaining)}</strong></div><div><span>Planos ativos</span><strong>{groups.length}</strong></div><div><span>Parcelas futuras</span><strong>{transactions.filter((item) => item.installment_group_id && isForecast(item)).length}</strong></div></div>{groups.length ? <div className="plans-grid">{groups.map((group) => { const items = transactions.filter((item) => item.installment_group_id === group.id); const paid = items.filter(isRealized).reduce((sum, item) => sum + item.amount_cents, 0); const progress = group.total_amount_cents ? Math.round(paid / group.total_amount_cents * 100) : 0; const next = items.filter(isForecast).sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))[0]; return <article className="panel plan-card" key={group.id}><div className="plan-top"><span className="plan-icon"><CalendarClock /></span><ActionMenu label="Ações do parcelamento" items={[{ label: "Ver parcelas", icon: ReceiptText, onClick: () => onStatement(group) }, { label: "Excluir parcelamento", icon: Trash2, danger: true, onClick: () => onRemove(group) }]} /></div><h3>{group.description}</h3><p>{items.filter(isRealized).length} de {group.installments_count} parcelas pagas</p><div className="progress"><span style={{ width: `${progress}%` }} /></div><div className="plan-values"><span><small>Pago</small><strong>{reais(paid)}</strong></span><span><small>Total</small><strong>{reais(group.total_amount_cents)}</strong></span></div><div className="next-installment"><Clock3 size={15} /><span>Próxima</span><strong>{next ? `${reais(next.amount_cents)} • ${shortDate.format(new Date(`${next.due_date}T00:00:00Z`))}` : "Concluído"}</strong></div></article>; })}</div> : <section className="panel"><EmptyState title="Nenhum parcelamento" description="Crie uma compra parcelada para acompanhar cada vencimento." action="Nova compra parcelada" onAction={onNew} /></section>}</>;
 }
 
-function PlanningScreen({ transactions, accounts, onNew }: { transactions: TransactionRow[]; accounts: Account[]; onNew: () => void }) {
+type PlanningItem = {
+  id: string;
+  type: TransactionRow["type"];
+  description: string;
+  amount_cents: number;
+  date: string;
+  month: string;
+  categoryName: string;
+  categoryIcon: string | null;
+  sourceName: string;
+  status: TransactionRow["status"] | "recurring";
+};
+
+function PlanningScreen({ transactions, accounts, cards, recurrences, onNew }: { transactions: TransactionRow[]; accounts: Account[]; cards: CreditCardRow[]; recurrences: Recurrence[]; onNew: () => void }) {
   const currentMonth = dateKey();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const forecast = transactions.filter(isForecast);
   const forecastMonth = (transaction: TransactionRow) => transactionMonth(transaction) < currentMonth ? currentMonth : transactionMonth(transaction);
+  const materializedOccurrences = new Set(transactions.filter((transaction) => transaction.recurrence_id).map((transaction) => `${transaction.recurrence_id}:${transactionMonth(transaction)}`));
+  const monthlyExpenses = recurrences.filter((recurrence) => recurrence.active && recurrence.type === "expense" && recurrence.frequency === "monthly");
+  const recurrenceItemsForMonth = (month: string): PlanningItem[] => monthlyExpenses
+    .filter((recurrence) => recurrenceCoversMonth(recurrence, month) && !materializedOccurrences.has(`${recurrence.id}:${month}`))
+    .map((recurrence) => ({
+      id: `recurrence:${recurrence.id}:${month}`,
+      type: "expense",
+      description: recurrence.description,
+      amount_cents: recurrence.amount_cents,
+      date: recurrenceDate(recurrence, month),
+      month,
+      categoryName: recurrence.category?.name ?? "Sem categoria",
+      categoryIcon: null,
+      sourceName: recurrence.account_id ? accounts.find((account) => account.id === recurrence.account_id)?.name ?? "Conta definida" : recurrence.credit_card_id ? cards.find((card) => card.id === recurrence.credit_card_id)?.name ?? "Cartão definido" : "Origem recorrente",
+      status: "recurring",
+    }));
+  const forecastItems: PlanningItem[] = forecast.map((transaction) => ({
+    id: transaction.id,
+    type: transaction.type,
+    description: transaction.description,
+    amount_cents: transaction.amount_cents,
+    date: transaction.due_date ?? transaction.transaction_date,
+    month: forecastMonth(transaction),
+    categoryName: transaction.category?.name ?? "Sem categoria",
+    categoryIcon: transaction.category?.icon ?? null,
+    sourceName: transaction.account?.name ?? transaction.credit_card?.name ?? "Sem origem",
+    status: transaction.status,
+  }));
+  const recurringExpenseThrough = (month: string) => monthlyExpenses.reduce((total, recurrence) => {
+    let firstMonth = recurrence.start_date.slice(0, 7) > currentMonth ? recurrence.start_date.slice(0, 7) : currentMonth;
+    if (!recurrenceCoversMonth(recurrence, firstMonth)) firstMonth = shiftMonthKey(firstMonth, 1);
+    let lastMonth = recurrence.end_date && recurrence.end_date.slice(0, 7) < month ? recurrence.end_date.slice(0, 7) : month;
+    if (!recurrenceCoversMonth(recurrence, lastMonth)) lastMonth = shiftMonthKey(lastMonth, -1);
+    if (firstMonth > lastMonth) return total;
+    const coveredMonths = monthOrdinal(lastMonth) - monthOrdinal(firstMonth) + 1;
+    const alreadyMaterialized = new Set(transactions
+      .filter((transaction) => transaction.recurrence_id === recurrence.id)
+      .map(transactionMonth)
+      .filter((transactionMonthKey) => transactionMonthKey >= firstMonth && transactionMonthKey <= lastMonth)).size;
+    return total + Math.max(coveredMonths - alreadyMaterialized, 0) * recurrence.amount_cents;
+  }, 0);
   const currentBalance = accounts.reduce((sum, account) => sum + accountBalance(account, transactions), 0);
-  const projectionThrough = (month: string) => currentBalance + forecast.filter((transaction) => forecastMonth(transaction) <= month).reduce((sum, transaction) => sum + signedAmount(transaction), 0);
-  const selectedItems = forecast.filter((transaction) => forecastMonth(transaction) === selectedMonth).sort((a, b) => (a.due_date ?? a.transaction_date).localeCompare(b.due_date ?? b.transaction_date));
+  const projectionThrough = (month: string) => currentBalance + forecast.filter((transaction) => forecastMonth(transaction) <= month).reduce((sum, transaction) => sum + signedAmount(transaction), 0) - recurringExpenseThrough(month);
+  const selectedItems = [...forecastItems.filter((item) => item.month === selectedMonth), ...recurrenceItemsForMonth(selectedMonth)].sort((a, b) => a.date.localeCompare(b.date));
   const expectedIncome = selectedItems.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount_cents, 0);
   const expectedExpense = selectedItems.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount_cents, 0);
   const projectedBalance = projectionThrough(selectedMonth);
   const selectedLabel = fullMonthName.format(new Date(`${selectedMonth}-01T00:00:00Z`));
-  const horizon = Array.from({ length: 6 }, (_, index) => { const key = shiftMonthKey(selectedMonth, index); const items = forecast.filter((transaction) => forecastMonth(transaction) === key); return { key, month: monthName.format(new Date(`${key}-01T00:00:00Z`)).replace(".", ""), saldo: projectionThrough(key) / 100, entrada: items.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount_cents / 100, 0), despesa: items.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount_cents / 100, 0) }; });
+  const horizon = Array.from({ length: 6 }, (_, index) => { const key = shiftMonthKey(selectedMonth, index); const items = [...forecastItems.filter((item) => item.month === key), ...recurrenceItemsForMonth(key)]; return { key, month: monthName.format(new Date(`${key}-01T00:00:00Z`)).replace(".", ""), saldo: projectionThrough(key) / 100, entrada: items.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount_cents / 100, 0), despesa: items.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount_cents / 100, 0) }; });
   const nextTwelveMonths = Array.from({ length: 12 }, (_, index) => shiftMonthKey(currentMonth, index));
   const firstNegativeMonth = nextTwelveMonths.find((month) => projectionThrough(month) < 0);
   const commitment = expectedIncome ? Math.round(expectedExpense / expectedIncome * 100) : expectedExpense ? 100 : 0;
   const changeMonth = (amount: number) => { const next = shiftMonthKey(selectedMonth, amount); if (next >= currentMonth) setSelectedMonth(next); };
 
   return <>
-    <PageTitle eyebrow="VISÃO DE FUTURO" title="Planejamento" subtitle="Antecipe o impacto dos valores pendentes, atrasados e agendados sem misturá-los ao realizado." action={<div className="planning-heading-actions"><div className="planning-month-control"><button type="button" onClick={() => changeMonth(-1)} disabled={selectedMonth === currentMonth} aria-label="Mês anterior"><ChevronLeft size={18} /></button><input type="month" min={currentMonth} value={selectedMonth} onChange={(event) => { if (event.target.value >= currentMonth) setSelectedMonth(event.target.value); }} aria-label="Mês do planejamento" /><button type="button" onClick={() => changeMonth(1)} aria-label="Próximo mês"><ChevronRight size={18} /></button></div><button className="primary-button" onClick={onNew}><Plus size={18} />Novo agendamento</button></div>} />
+    <PageTitle eyebrow="VISÃO DE FUTURO" title="Planejamento" subtitle="Antecipe lançamentos futuros e despesas recorrentes mensais sem misturá-los ao realizado." action={<div className="planning-heading-actions"><div className="planning-month-control"><button type="button" onClick={() => changeMonth(-1)} disabled={selectedMonth === currentMonth} aria-label="Mês anterior"><ChevronLeft size={18} /></button><input type="month" min={currentMonth} value={selectedMonth} onChange={(event) => { if (event.target.value >= currentMonth) setSelectedMonth(event.target.value); }} aria-label="Mês do planejamento" /><button type="button" onClick={() => changeMonth(1)} aria-label="Próximo mês"><ChevronRight size={18} /></button></div><button className="primary-button" onClick={onNew}><Plus size={18} />Novo agendamento</button></div>} />
 
     <section className="planning-hero panel">
-      <div className="planning-hero-copy"><span>Saldo estimado ao fim de {selectedLabel}</span><strong>{reais(projectedBalance)}</strong><p>Saldo disponível hoje somado apenas aos lançamentos ainda previstos até o mês selecionado.</p></div>
+      <div className="planning-hero-copy"><span>Saldo estimado ao fim de {selectedLabel}</span><strong>{reais(projectedBalance)}</strong><p>Saldo disponível hoje somado aos lançamentos previstos e às despesas recorrentes mensais ativas até o mês selecionado.</p></div>
       <div className="planning-hero-values"><span><small>Saldo disponível hoje</small><b>{reais(currentBalance)}</b></span><span><small>Variação prevista acumulada</small><b className={projectedBalance - currentBalance >= 0 ? "positive" : "negative"}>{reais(projectedBalance - currentBalance)}</b></span></div>
     </section>
 
@@ -480,11 +538,11 @@ function PlanningScreen({ transactions, accounts, onNew }: { transactions: Trans
     </section>
 
     <section className="planning-grid">
-      <article className="panel planning-chart-panel"><PanelHeader title="Trajetória projetada" subtitle={`Saldo acumulado a partir de ${selectedLabel}`} /><div className="planning-chart">{accounts.length || forecast.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={horizon} margin={{ top: 16, right: 18, bottom: 0, left: -8 }}><defs><linearGradient id="planningBalance" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--forest-2)" stopOpacity=".34" /><stop offset="100%" stopColor="var(--forest-2)" stopOpacity="0" /></linearGradient></defs><CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="4 4" /><XAxis dataKey="month" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${Math.round(value / 1000)}k`} /><Tooltip content={<ChartTooltip />} /><Area type="monotone" dataKey="saldo" name="Saldo projetado" stroke="var(--forest-2)" strokeWidth={3} fill="url(#planningBalance)" /></AreaChart></ResponsiveContainer> : <EmptyState compact title="Sem projeção ainda" description="Cadastre um saldo ou um lançamento futuro." />}</div><div className="planning-chart-legend"><span><i />Saldo projetado</span><small>Valores pagos já estão incorporados ao saldo de hoje e não são somados novamente.</small></div></article>
+      <article className="panel planning-chart-panel"><PanelHeader title="Trajetória projetada" subtitle={`Saldo acumulado a partir de ${selectedLabel}`} /><div className="planning-chart">{accounts.length || forecast.length || monthlyExpenses.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={horizon} margin={{ top: 16, right: 18, bottom: 0, left: -8 }}><defs><linearGradient id="planningBalance" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--forest-2)" stopOpacity=".34" /><stop offset="100%" stopColor="var(--forest-2)" stopOpacity="0" /></linearGradient></defs><CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="4 4" /><XAxis dataKey="month" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `${Math.round(value / 1000)}k`} /><Tooltip content={<ChartTooltip />} /><Area type="monotone" dataKey="saldo" name="Saldo projetado" stroke="var(--forest-2)" strokeWidth={3} fill="url(#planningBalance)" /></AreaChart></ResponsiveContainer> : <EmptyState compact title="Sem projeção ainda" description="Cadastre um saldo, um lançamento futuro ou uma recorrência mensal." />}</div><div className="planning-chart-legend"><span><i />Saldo projetado</span><small>Inclui recorrências mensais ativas. Quando o lançamento da recorrência já existe, ele prevalece e o valor não é duplicado.</small></div></article>
       <article className={`panel planning-health ${firstNegativeMonth ? "at-risk" : "healthy"}`}><span className="planning-health-icon">{firstNegativeMonth ? <Clock3 size={22} /> : <ShieldCheck size={22} />}</span><small>LEITURA DOS PRÓXIMOS 12 MESES</small><h3>{firstNegativeMonth ? "Atenção ao caixa futuro" : "Horizonte financeiramente saudável"}</h3><p>{firstNegativeMonth ? `Pelos lançamentos atuais, o saldo pode ficar negativo em ${fullMonthName.format(new Date(`${firstNegativeMonth}-01T00:00:00Z`))}.` : "Nenhum dos próximos doze meses termina com saldo projetado negativo."}</p><div className="planning-health-facts"><span><small>Comprometimento no mês</small><strong>{commitment}%</strong></span><span><small>Lançamentos previstos</small><strong>{selectedItems.length}</strong></span></div></article>
     </section>
 
-    <section className="panel planning-agenda"><PanelHeader title={`Agenda de ${selectedLabel}`} subtitle="Somente valores que ainda não foram realizados"><span className="count-badge">{selectedItems.length}</span></PanelHeader>{selectedItems.length ? <div className="planning-list">{selectedItems.map((transaction) => { const date = new Date(`${transaction.due_date ?? transaction.transaction_date}T00:00:00Z`); const positive = transaction.type === "income"; return <article className="planning-item" key={transaction.id}><span className="date-block"><strong>{String(date.getUTCDate()).padStart(2, "0")}</strong><small>{monthName.format(date).replace(".", "").toUpperCase()}</small></span><span className="tx-icon"><CategoryGlyph icon={transaction.category?.icon} size={17} /></span><div><strong>{transaction.description}</strong><small>{transaction.category?.name ?? "Sem categoria"} • {transaction.account?.name ?? transaction.credit_card?.name ?? "Sem origem"}</small></div><span className={`status status-${statusLabel[transaction.status].toLowerCase()}`}>{statusLabel[transaction.status]}</span><strong className={positive ? "positive" : "negative"}>{positive ? "+ " : "− "}{reais(transaction.amount_cents)}</strong></article>; })}</div> : <EmptyState title="Nenhum valor previsto neste mês" description="Você pode navegar para outro mês ou criar um novo agendamento." action="Novo agendamento" onAction={onNew} />}</section>
+    <section className="panel planning-agenda"><PanelHeader title={`Agenda de ${selectedLabel}`} subtitle="Lançamentos não realizados e recorrências mensais ativas"><span className="count-badge">{selectedItems.length}</span></PanelHeader>{selectedItems.length ? <div className="planning-list">{selectedItems.map((item) => { const date = new Date(`${item.date}T00:00:00Z`); const positive = item.type === "income"; const label = item.status === "recurring" ? "Recorrente" : statusLabel[item.status]; return <article className="planning-item" key={item.id}><span className="date-block"><strong>{String(date.getUTCDate()).padStart(2, "0")}</strong><small>{monthName.format(date).replace(".", "").toUpperCase()}</small></span><span className="tx-icon">{item.status === "recurring" ? <RefreshCw size={17} /> : <CategoryGlyph icon={item.categoryIcon} size={17} />}</span><div><strong>{item.description}</strong><small>{item.categoryName} • {item.sourceName}{item.status === "recurring" ? " • mensal" : ""}</small></div><span className={`status status-${label.toLowerCase()}`}>{label}</span><strong className={positive ? "positive" : "negative"}>{positive ? "+ " : "− "}{reais(item.amount_cents)}</strong></article>; })}</div> : <EmptyState title="Nenhum valor previsto neste mês" description="Você pode navegar para outro mês ou criar um novo agendamento." action="Novo agendamento" onAction={onNew} />}</section>
   </>;
 }
 
